@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Avaliação Interativa: IA e Programação Python</title>
+    <!-- Carregamento do Tailwind CSS para Estilização e Responsividade -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Configuração de Fonte Global (Inter) */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1e293b;
+            /* Slate-800 - Tom Escuro */
+            color: #f1f5f9;
+            /* Slate-100 */
+        }
+
+        /* Estilização para as opções de resposta */
+        .option-label {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            border: 1px solid #475569;
+            /* Slate-600 */
+            background-color: #334155;
+            /* Slate-700 */
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            color: #e2e8f0;
+            /* Texto Claro */
+        }
+
+        .option-label:hover {
+            border-color: #6366f1;
+            /* Indigo-500 */
+            background-color: #475569;
+            /* Slate-600 */
+        }
+
+        .option-label input[type="radio"] {
+            margin-right: 0.75rem;
+            accent-color: #4f46e5;
+            /* Indigo-600 */
+        }
+
+        .correct-answer {
+            background-color: #d1fae5;
+            /* Green-100 - Manter claro para visibilidade */
+            border-color: #34d399;
+            /* Green-400 */
+            color: #064e3b;
+            /* Texto Escuro no acerto */
+        }
+
+        .incorrect-answer {
+            background-color: #fee2e2;
+            /* Red-100 - Manter claro para visibilidade */
+            border-color: #f87171;
+            /* Red-400 */
+            color: #7f1d1d;
+            /* Texto Escuro no erro */
+        }
+
+        /* Estilo para a caixa de código nas questões de Análise de Código */
+        .code-block {
+            background-color: #0f172a;
+            /* Slate-900 */
+            color: #94a3b8;
+            /* Slate-400 */
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-top: 1rem;
+            white-space: pre-wrap;
+            font-family: monospace;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen flex flex-col">
+
+    <header class="bg-indigo-600 shadow-md p-6">
+        <div class="container mx-auto">
+            <h1 class="text-3xl font-extrabold text-white text-center">Avaliação Interativa: Fundamentos de IA e Python
+            </h1>
+            <p class="text-indigo-200 text-center mt-2">21 Questões para testar seu conhecimento.</p>
+        </div>
+    </header>
+
+    <main class="container mx-auto p-4 md:p-8 flex-grow">
+        <div id="quiz-container" class="space-y-12">
+            <!-- As questões serão carregadas aqui pelo JavaScript -->
+        </div>
+    </main>
+
+    <footer class="bg-gray-900 text-white p-4 text-center mt-8">
+        <p class="text-sm">&copy; 2024 Avaliação Interativa. Desenvolvido por Gilvan Daniel da Silva.</p>
+    </footer>
+
+    <!-- Modal de Feedback (Customizado para evitar alert()) -->
+    <div id="feedbackModal"
+        class="hidden fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-80 p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 transform transition-all duration-300 scale-100">
+            <h3 id="modalTitle" class="text-2xl font-bold mb-4 text-gray-900">Feedback</h3>
+            <p id="modalMessage" class="text-gray-700 mb-6"></p>
+            <button onclick="closeModal()"
+                class="w-full px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition duration-150">
+                Entendi
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Array de ditados japoneses para feedback positivo (21 no total)
+        const ditados = [
+            "'Nanakorobi yaoki': Cair sete vezes, levantar oito.", // Q1
+            "'Ichi-go ichi-e': Uma chance, um encontro (valorize o momento).", // Q2
+            "'Kaizen': Melhoria contínua e gradual.", // Q3
+            "'Omon-bakaru': Pensar profundamente sobre os outros (empatia).", // Q4
+            "'Tsumi-kasanaru': Acúmulo de esforço leva ao sucesso.", // Q5
+            "'Jishuku': Autocontrole e disciplina.", // Q6
+            "'Keizoku wa chikara nari': Continuidade é poder (a persistência vence).", // Q7
+            "'Mazu ichi-po': O primeiro passo é o mais importante.", // Q8
+            "'Saru mo ki kara ochiru': Até macacos caem de árvores (todos erram).", // Q9
+            "'Shoshin wasuru bekarazu': Nunca esqueça a mente do iniciante.", // Q10
+            "'Rōma wa ichi nichi ni shite narazu': Roma não foi construída em um dia.", // Q11
+            "'Gambaru': Fazer o seu melhor e persistir, mesmo na dificuldade.", // Q12
+            "'Issun no mushi ni mo gobu no tamashii': Até um inseto tem alma (valorize o pequeno).", // Q13
+            "'Yareba dekiru': Se você tentar, você consegue.", // Q14 - NOVO
+            "'Atarashii koto wo hajimeru ni ososugiru koto wa nai': Nunca é tarde para começar algo novo.", // Q15 - NOVO
+            "'Kōjōshin': Espírito de aprimoramento e progresso.", // Q16 - Antigo Q15
+            "'Chiri mo tsumoreba yama to naru': Poeira acumulada torna-se uma montanha.", // Q17 - Antigo Q16
+            "'Hito wa mikake ni yoranu mono': As pessoas não devem ser julgadas pela aparência.", // Q18 - Antigo Q17
+            "'Kinō wa kinō, kyō wa kyō': Ontem é ontem, hoje é hoje (foco no presente).", // Q19 - Antigo Q18
+            "'Kokoro no mama ni': Siga o seu coração, seja autêntico.", // Q20 - Antigo Q20
+            "'Ki ga tōku naru': Ficar tonto de alegria (significa que você superou o desafio!)." // Q21 - Antigo Q21
+        ];
+
+        // Função para mostrar o modal
+        function showModal(title, message) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalMessage').textContent = message;
+            document.getElementById('feedbackModal').classList.remove('hidden');
+        }
+
+        // Função para fechar o modal
+        function closeModal() {
+            document.getElementById('feedbackModal').classList.add('hidden');
+        }
+
+        // --- Dados das 21 Questões ---
+
+        const questions = [
+            // 1. Conceitos Fundamentais de IA (AR)
+            {
+                id: 1,
+                summary: "O campo da IA possui diferentes escolas de pensamento. As definições de IA se classificam em duas dimensões principais: 'pensar/agir como humanos' e 'pensar/agir racionalmente'.",
+                question: "ASSINALA-SE que a abordagem 'pensar como humanos' é puramente teórica e não possui métricas de avaliação. PORQUE esta abordagem se concentra em modelos de raciocínio, ignorando a performance de saída e o Teste de Turing.",
+                type: "AR",
+                options: [
+                    { text: "A asserção e a razão são proposições verdadeiras, e a razão é uma justificativa correta da asserção.", isCorrect: false, rationale: "A abordagem 'pensar como humanos' usa a introspecção e a experimentação cognitiva, não sendo puramente teórica, mas a razão principal não justifica o erro da asserção." },
+                    { text: "A asserção e a razão são proposições verdadeiras, mas a razão não é uma justificativa correta da asserção.", isCorrect: false, rationale: "Ambas são falsas. A abordagem 'pensar como humanos' é ligada ao Teste de Turing, que é uma métrica de performance, e a afirmação sobre a razão está incorreta." },
+                    { text: "A asserção é uma proposição verdadeira, e a razão é uma proposição falsa.", isCorrect: false, rationale: "A asserção é falsa, pois o Teste de Turing é a métrica central para a abordagem 'agindo como humanos', que é mensurável, não ignorada." },
+                    { text: "A asserção é uma proposição falsa, e a razão é uma proposição falsa.", isCorrect: true, rationale: "A asserção é falsa porque a abordagem 'agir como humanos' (Teste de Turing) é a mais conhecida e foca na performance de saída. A razão é falsa porque o Teste de Turing é central para a dimensão de IA 'agindo como humanos'." }
+                ],
+                correct_saying_index: 0, /* Mapeia para ditados[0] */
+                hint: "O Teste de Turing não avalia como o humano pensa, mas sim a performance do comportamento de um sistema."
+            },
+            // 2. Teste de Turing (MC)
+            {
+                id: 2,
+                summary: "O Teste de Turing é um marco na história da IA, propondo um teste de capacidade de uma máquina de exibir comportamento inteligente indistinguível do de um ser humano.",
+                question: "Qual aspecto o Teste de Turing tradicional (padrão) avalia primariamente?",
+                type: "MC",
+                options: [
+                    { text: "A velocidade de processamento da máquina em tarefas complexas.", isCorrect: false, rationale: "O foco não é a velocidade, mas sim a qualidade da interação textual (linguagem natural)." },
+                    { text: "A capacidade do agente de agir racionalmente para atingir seus objetivos.", isCorrect: false, rationale: "Esta é a base da abordagem 'agindo racionalmente', não do teste de Turing padrão." },
+                    { text: "A habilidade da máquina de se comunicar em linguagem natural de forma indistinguível de um ser humano.", isCorrect: true, rationale: "O Teste de Turing se baseia na interação por texto/linguagem, onde um interrogador não consegue distinguir o humano da máquina." },
+                    { text: "O uso de visão computacional e robótica para interagir com o ambiente.", isCorrect: false, rationale: "Estes são elementos do Teste de Turing 'Ampliado' ou 'Total'." }
+                ],
+                correct_saying_index: 1, /* Mapeia para ditados[1] */
+                hint: "Pense na forma como o teste é conduzido, onde o interrogador não vê nem toca na máquina."
+            },
+            // 3. Agentes Racionais (AR)
+            {
+                id: 3,
+                summary: "Um Agente Racional é um sistema que percebe seu ambiente e age para alcançar o melhor resultado possível ou, quando há incerteza, o melhor resultado esperado.",
+                question: "ASSINALA-SE que a racionalidade de um agente é avaliada unicamente pelo seu conhecimento prévio sobre o ambiente. PORQUE o agente deve sempre escolher a ação que maximiza sua medida de desempenho, baseada apenas na sua sequência de percepções até o momento.",
+                type: "AR",
+                options: [
+                    { text: "A asserção é uma proposição falsa, e a razão é uma proposição verdadeira.", isCorrect: true, rationale: "A asserção é falsa: a racionalidade não depende 'unicamente' do conhecimento prévio, mas de performance, percepções e ações. A razão é verdadeira: o princípio da racionalidade é escolher a ação que otimiza o desempenho com base nas evidências coletadas (percepções)." },
+                    { text: "A asserção e a razão são proposições verdadeiras, e a razão não é uma justificativa correta da asserção.", isCorrect: false, rationale: "A asserção é falsa. O conhecimento prévio é importante, mas o agente deve usar também as percepções e ações." },
+                    { text: "A asserção é uma proposição verdadeira, e a razão é uma proposição falsa.", isCorrect: false, rationale: "A asserção é falsa e a razão é verdadeira. A racionalidade foca na maximização do desempenho, mas não 'apenas' no conhecimento prévio." },
+                    { text: "A asserção e a razão são proposições falsas.", isCorrect: false, rationale: "A asserção é falsa, mas a razão (definição do que o agente deve fazer) é verdadeira." }
+                ],
+                correct_saying_index: 2, /* Mapeia para ditados[2] */
+                hint: "A definição de racionalidade envolve a capacidade de agir (o 'agir' racionalmente), e não apenas o 'pensar'."
+            },
+            // 4. Ciclo do Agente (MC)
+            {
+                id: 4,
+                summary: "O agente racional opera em um ciclo contínuo de percepção, processamento, ação e aprendizado, visando a melhoria contínua.",
+                question: "No ciclo de funcionamento de um agente racional, qual é a etapa que transforma a informação bruta do ambiente em dados utilizáveis para a tomada de decisão?",
+                type: "MC",
+                options: [
+                    { text: "Ação, pois é o momento em que o agente interage com o ambiente.", isCorrect: false, rationale: "A Ação é o resultado da decisão, a mudança física ou lógica no ambiente." },
+                    { text: "Percepção, que consiste apenas em captar a entrada do ambiente.", isCorrect: false, rationale: "A Percepção é a entrada, o 'dado bruto', mas não a transformação em informação utilizável." },
+                    { text: "Processamento (ou Função Agente), onde o agente decide a melhor ação com base nas percepções e em seu conhecimento.", isCorrect: true, rationale: "O Processamento é a fase crucial onde as percepções são analisadas, o conhecimento é consultado, e a ação ideal é determinada." },
+                    { text: "Aprendizado, que modifica o conhecimento prévio, mas não a percepção atual.", isCorrect: false, rationale: "O Aprendizado é a otimização de longo prazo, alterando o conhecimento, mas não o processamento da informação bruta da percepção atual." }
+                ],
+                correct_saying_index: 3, /* Mapeia para ditados[3] */
+                hint: "Essa etapa envolve a 'inteligência' do agente, onde o raciocínio é aplicado."
+            },
+            // 5. Python: Listas (MC)
+            {
+                id: 5,
+                summary: "Em Python, listas são coleções ordenadas de itens. A indexação de listas e outras sequências (strings, tuplas) começa sempre do zero.",
+                question: "Para acessar o segundo elemento de uma lista chamada 'dados', qual índice deve ser utilizado?",
+                type: "MC",
+                options: [
+                    { text: "Índice 1", isCorrect: true, rationale: "Como a indexação em Python começa em 0, o primeiro elemento é o índice 0, o segundo é o índice 1, e assim por diante." },
+                    { text: "Índice 2", isCorrect: false, rationale: "O índice 2 acessaria o terceiro elemento da lista." },
+                    { text: "Índice 0", isCorrect: false, rationale: "O índice 0 acessa o primeiro elemento da lista." },
+                    { text: "Índice -1", isCorrect: false, rationale: "O índice -1 acessa o último elemento da lista." }
+                ],
+                correct_saying_index: 4, /* Mapeia para ditados[4] */
+                hint: "Lembre-se que o computador 'conta' a partir de zero."
+            },
+            // 6. Python: Dicionários (MC)
+            {
+                id: 6,
+                summary: "Dicionários são coleções não ordenadas de pares chave-valor. O acesso aos valores é feito diretamente pelas chaves, diferentemente das listas, que usam índices numéricos.",
+                question: "Dado o dicionário 'config = {'cor': 'azul', 'tamanho': 'grande'}', como você acessaria o valor 'azul'?",
+                type: "MC",
+                options: [
+                    { text: "config['cor']", isCorrect: true, rationale: "O acesso a valores em dicionários Python é realizado usando a chave correspondente entre colchetes." },
+                    { text: "config.get(0)", isCorrect: false, rationale: "Dicionários não são indexados por posição (0, 1, 2...), mas sim por chaves." },
+                    { text: "config['azul']", isCorrect: false, rationale: "Esta tentaria acessar um valor cuja chave é 'azul', o que geraria um erro de chave (KeyError)." },
+                    { text: "config[1]", isCorrect: false, rationale: "Índices numéricos não se aplicam a dicionários, que não são ordenados por padrão." }
+                ],
+                correct_saying_index: 5, /* Mapeia para ditados[5] */
+                hint: "Pense na 'palavra' que você usaria para procurar uma 'definição' em um dicionário real."
+            },
+            // 7. Python: Operadores Lógicos (AR)
+            {
+                id: 7,
+                summary: "Os operadores lógicos `and`, `or`, e `not` retornam valores booleanos (True ou False) e são essenciais para o controle de fluxo. O operador `and` retorna True se e somente se ambas as condições forem True.",
+                question: "ASSINALA-SE que a expressão `(5 > 3) and (10 == 10)` resultará em `True`. PORQUE o operador `and` exige que apenas uma das expressões de comparação seja verdadeira para retornar `True`.",
+                type: "AR",
+                options: [
+                    { text: "A asserção e a razão são proposições verdadeiras, e a razão é uma justificativa correta da asserção.", isCorrect: false, rationale: "A razão está incorreta: o operador AND exige que AMBAS as condições sejam verdadeiras." },
+                    { text: "A asserção e a razão são proposições verdadeiras, mas a razão não é uma justificativa correta da asserção.", isCorrect: false, rationale: "A asserção é verdadeira, mas a razão é falsa." },
+                    { text: "A asserção é uma proposição verdadeira, e a razão é uma proposição falsa.", isCorrect: true, rationale: "A asserção é verdadeira, pois ambas as comparações ($5>3$ e $10==10$) são $True$, e $True$ and $True$ é $True$. A razão é falsa, pois o operador $and$ exige que *todas* as expressões sejam verdadeiras." },
+                    { text: "A asserção e a razão são proposições falsas.", isCorrect: false, rationale: "A asserção é verdadeira." }
+                ],
+                correct_saying_index: 6, /* Mapeia para ditados[6] */
+                hint: "Revise a tabela verdade para o operador lógico `and`."
+            },
+            // 8. Python: Análise de Código (while True + break) - CA 1/3
+            {
+                id: 8,
+                summary: "O loop `while True` cria um loop infinito, usado para manter um programa rodando continuamente (como um chatbot). A instrução `break` é essencial para sair desse loop de forma controlada.",
+                question: "Analise o trecho de código Python e descreva sua funcionalidade:",
+                type: "CA",
+                code: "while True:\n    entrada = input('Diga algo: ')\n    if entrada == 'sair':\n        break\n    print(f'Você disse: {entrada}')",
+                options: [
+                    { text: "O código executa um loop que se repete 10 vezes, parando após a décima iteração, independentemente da entrada do usuário.", isCorrect: false, rationale: "O loop é $while$ $True$, indicando loop infinito, não fixo em 10 iterações." },
+                    { text: "O código inicia um loop que aceita entradas de texto continuamente e as exibe, encerrando o programa somente quando o usuário digitar a palavra 'sair'.", isCorrect: true, rationale: "O $while$ $True$ garante a continuidade, e o $if$ $entrada == 'sair':$ $break$ permite a saída controlada do loop." },
+                    { text: "O código falha ao rodar, pois $while$ $True$ deve ser substituído por um operador de comparação para evitar um loop infinito.", isCorrect: false, rationale: "O $while$ $True$ é um padrão de programação válido, desde que haja uma lógica de $break$ para encerramento." },
+                    { text: "O código exibe 'Você disse: sair' e então encerra o programa.", isCorrect: false, rationale: "Ao digitar 'sair', o $break$ é acionado imediatamente, impedindo que a linha $print(...)$ seja executada." }
+                ],
+                correct_saying_index: 7, /* Mapeia para ditados[7] */
+                hint: "Preste atenção à condição do $if$ e ao efeito da palavra-chave $break$."
+            },
+            // 9. Python: Funções (MC)
+            {
+                id: 9,
+                summary: "Funções em Python são definidas com a palavra-chave `def` e permitem agrupar um bloco de código que pode ser reutilizado. Elas podem receber parâmetros (entradas) e retornar valores (saídas).",
+                question: "Qual é o principal propósito do uso de funções na programação?",
+                type: "MC",
+                options: [
+                    { text: "Aumentar a velocidade de execução do código, pois funções são otimizadas pelo interpretador Python.", isCorrect: false, rationale: "Embora a otimização possa ocorrer, o propósito principal é estrutural: organização e reutilização." },
+                    { text: "Permitir a reutilização de um bloco de código, tornando o código mais organizado, legível e modular.", isCorrect: true, rationale: "O principal benefício das funções é a modularidade (divisão em partes menores) e a reutilização (chamar o código diversas vezes)." },
+                    { text: "Definir variáveis globais que podem ser acessadas de qualquer parte do programa.", isCorrect: false, rationale: "Funções tendem a priorizar variáveis locais, e esta não é a razão fundamental para a sua existência." },
+                    { text: "Executar apenas uma vez um conjunto específico de instruções no início do programa.", isCorrect: false, rationale: "As funções podem ser chamadas múltiplas vezes e a qualquer momento." }
+                ],
+                correct_saying_index: 8, /* Mapeia para ditados[8] */
+                hint: "Pense em como você faria para executar a mesma tarefa em diferentes pontos do seu código sem ter que reescrever tudo."
+            },
+            // 10. Chatbot: lower() (MC)
+            {
+                id: 10,
+                summary: "Em aplicações como chatbots, é essencial tornar a entrada do usuário robusta e previsível. O método `lower()` é usado para converter todo o texto de entrada para letras minúsculas.",
+                question: "Por que o uso da função `lower()` na entrada do usuário é fundamental para a lógica de um chatbot?",
+                type: "MC",
+                options: [
+                    { text: "Para economizar espaço de memória, pois letras minúsculas ocupam menos bytes.", isCorrect: false, rationale: "A diferença de memória é insignificante; a razão é funcionalidade." },
+                    { text: "Para garantir que a comparação da entrada (e.g., 'SAIR', 'Sair', 'sair') funcione corretamente com um comando pré-definido em minúsculas.", isCorrect: true, rationale: "A padronização da caixa (case) evita que o programa falhe ao reconhecer comandos devido a diferenças entre letras maiúsculas e minúsculas." },
+                    { text: "Porque o Python só consegue processar strings que estão totalmente em minúsculas.", isCorrect: false, rationale: "O Python processa qualquer string, mas a lógica de comparação é sensível à caixa." },
+                    { text: "Para aumentar a segurança, ocultando a capitalização original do usuário.", isCorrect: false, rationale: "Não há relação com segurança, mas sim com a robustez do código." }
+                ],
+                correct_saying_index: 9, /* Mapeia para ditados[9] */
+                hint: "Pense em como o Python compara a string 'Olá' com a string 'olá'."
+            },
+            // 11. Bibliotecas (AR)
+            {
+                id: 11,
+                summary: "Bibliotecas são coleções de código pré-escrito. Elas se dividem em bibliotecas 'padrão' (já inclusas no Python) e de 'comunidade' (instaladas via ferramentas como `pip`).",
+                question: "ASSINALA-SE que as bibliotecas padrão de uma linguagem não precisam ser explicitamente importadas antes do uso. PORQUE as bibliotecas de comunidade são geralmente mais seguras e confiáveis para projetos críticos.",
+                type: "AR",
+                options: [
+                    { text: "A asserção e a razão são proposições verdadeiras, e a razão é uma justificativa correta da asserção.", isCorrect: false, rationale: "Ambas as proposições estão incorretas." },
+                    { text: "A asserção e a razão são proposições falsas.", isCorrect: true, rationale: "A asserção é falsa: a maioria das bibliotecas padrão (ex: $math$, $os$) *deve* ser importada. A razão é falsa: bibliotecas padrão são geralmente mais testadas e confiáveis do que as de comunidade (que dependem de terceiros)." },
+                    { text: "A asserção é uma proposição verdadeira, e a razão é uma proposição falsa.", isCorrect: false, rationale: "A asserção é falsa. A maioria das bibliotecas padrão requer importação para uso." },
+                    { text: "A asserção é uma proposição falsa, e a razão é uma proposição verdadeira.", isCorrect: false, rationale: "A razão é falsa. Bibliotecas padrão, por virem do desenvolvedor da linguagem, tendem a ser mais seguras e confiáveis." }
+                ],
+                correct_saying_index: 10, /* Mapeia para ditados[10] */
+                hint: "Pense em bibliotecas como 'math' ou 'os' no Python. Você as usa diretamente ou precisa de um $import$?"
+            },
+            // 12. LangChain (MC)
+            {
+                id: 12,
+                summary: "LangChain é um framework que facilita o desenvolvimento de aplicações orientadas a modelos de linguagem (LLMs). Seu papel é conectar LLMs a dados e aplicações externas.",
+                question: "Qual o principal papel do framework LangChain em um projeto de Inteligência Artificial moderno?",
+                type: "MC",
+                options: [
+                    { text: "Ser o modelo de linguagem (LLM) principal, como um substituto do GPT-4 ou Gemini.", isCorrect: false, rationale: "LangChain é uma ferramenta para *conectar* LLMs, não o LLM em si." },
+                    { text: "Gerenciar a infraestrutura de servidores em nuvem para o treinamento de LLMs.", isCorrect: false, rationale: "Esta é uma tarefa de DevOps e plataformas de nuvem, não o foco do LangChain." },
+                    { text: "Atuar como um orquestrador, ligando Modelos de Linguagem a fontes de dados externas e a outras ferramentas de software.", isCorrect: true, rationale: "LangChain é uma camada de abstração e orquestração para criar 'cadeias' (chains) de ação para LLMs." },
+                    { text: "Fornecer um conjunto de funções Python para manipulação de listas e dicionários.", isCorrect: false, rationale: "Isso é o propósito das bibliotecas padrão ou utilitárias do Python, não de frameworks de LLMs." }
+                ],
+                correct_saying_index: 11, /* Mapeia para ditados[11] */
+                hint: "O nome do framework sugere 'cadeias' ou 'ligações'."
+            },
+            // 13. Extended Turing Test (AR)
+            {
+                id: 13,
+                summary: "O Teste de Turing ampliado (ou Total) expande o teste padrão para incluir interação física com o ambiente, exigindo habilidades como visão computacional e robótica.",
+                question: "ASSINALA-SE que a inclusão de visão computacional e robótica no Teste de Turing o torna mais abrangente, avaliando o agente em sua capacidade de 'agir como humano' no mundo real. PORQUE o teste padrão avalia apenas as capacidades de raciocínio e o comportamento comunicativo.",
+                type: "AR",
+                options: [
+                    { text: "A asserção e a razão são proposições verdadeiras, e a razão é uma justificativa correta da asserção.", isCorrect: true, rationale: "A asserção é verdadeira (torna-se mais abrangente). A razão é verdadeira e justifica: o teste padrão foca em comunicação/raciocínio, e o ampliado adiciona percepção/ação física." },
+                    { text: "A asserção e a razão são proposições verdadeiras, mas a razão não é uma justificativa correta da asserção.", isCorrect: false, rationale: "A razão é uma justificativa correta do porquê o teste ampliado é necessário." },
+                    { text: "A asserção é uma proposição falsa, e a razão é uma proposição verdadeira.", isCorrect: false, rationale: "A asserção é verdadeira." },
+                    { text: "A asserção é uma proposição verdadeira, e a razão é uma proposição falsa.", isCorrect: false, rationale: "A razão é verdadeira." }
+                ],
+                correct_saying_index: 12, /* Mapeia para ditados[12] */
+                hint: "Pense no que falta ao teste padrão que a visão e a robótica adicionam."
+            },
+            // 14. NOVO: LLM: Prompt do Sistema e RAG (MC) - Foco em LLM/Aplicação
+            {
+                id: 14,
+                summary: "Em aplicações de LLM, o 'prompt do sistema' é a instrução inicial que define o papel e as regras do modelo, sendo fundamental para o RAG (Retrieval Augmented Generation).",
+                question: "Qual o principal objetivo de um 'Prompt do Sistema' em uma aplicação que usa LangChain e LLMs?",
+                type: "MC",
+                options: [
+                    { text: "Servir como o dado de contexto externo (documento PDF ou web) que o modelo deve consultar.", isCorrect: false, rationale: "O dado de contexto é fornecido por 'loaders' e injetado via vetorização, não pelo Prompt do Sistema." },
+                    { text: "Definir o papel, persona e as regras que o LLM deve seguir ao gerar a resposta.", isCorrect: true, rationale: "O Prompt do Sistema é a 'direção' do modelo, definindo como ele deve se comportar (tom, persona) e quais restrições seguir." },
+                    { text: "Ativar a função 'break' para encerrar o loop de entrada e saída do chatbot.", isCorrect: false, rationale: "Este é um controle de fluxo da linguagem de programação Python, não do LLM." },
+                    { text: "Armazenar o histórico de variáveis e estados do agente racional.", isCorrect: false, rationale: "O histórico é geralmente armazenado em memória ou banco de dados, não no Prompt do Sistema." }
+                ],
+                correct_saying_index: 13,
+                hint: "Pense na função de um manual de instruções ou de um roteiro de ator para o modelo."
+            },
+            // 15. NOVO: LLM: Loaders e Ingestão de Dados (AR) - Foco em LLM/Aplicação
+            {
+                id: 15,
+                summary: "Loaders (como WebBaseLoader, PyPDFLoader) são componentes essenciais para a Arquitetura RAG (Retrieval Augmented Generation), permitindo que LLMs consultem informações externas.",
+                question: "ASSINALA-SE que a função de um Loader é apenas carregar o texto de um documento para a memória. PORQUE a principal função do Loader é transformar dados não estruturados (PDF, web) em um formato legível para o Modelo de Linguagem.",
+                type: "AR",
+                options: [
+                    { text: "A asserção e a razão são proposições verdadeiras, e a razão é uma justificativa correta da asserção.", isCorrect: false, rationale: "A razão é verdadeira, mas a asserção é falsa, pois o Loader não apenas 'carrega', mas faz a primeira conversão/estrutura do dado." },
+                    { text: "A asserção e a razão são proposições falsas.", isCorrect: false, rationale: "A razão é verdadeira, descrevendo corretamente o papel de estruturação do Loader." },
+                    { text: "A asserção é uma proposição verdadeira, e a razão é uma proposição falsa.", isCorrect: false, rationale: "A asserção é falsa." },
+                    { text: "A asserção é uma proposição falsa, e a razão é uma proposição verdadeira.", isCorrect: true, rationale: "A asserção é falsa: Loaders não apenas carregam, mas *estruturam* o texto do documento. A razão é verdadeira: o objetivo do Loader é converter o formato bruto (PDF, HTML) em texto estruturado que o LLM e os sistemas de vetorização possam processar." }
+                ],
+                correct_saying_index: 14,
+                hint: "O processo de carregar dados externos envolve mais do que simplesmente ler; ele inclui a formatação inicial para uso pelo LLM."
+            },
+            // 16. Python: Função Return (AR) (Antigo Q15)
+            {
+                id: 16,
+                summary: "A instrução `return` dentro de uma função é usada para finalizar a execução da função e enviar um valor de volta para a chamada. Uma função pode ou não ter um `return` explícito.",
+                question: "ASSINALA-SE que, se uma função não contém a instrução `return` explicitamente, ela não pode ser usada em uma expressão. PORQUE a ausência de `return` faz com que a função retorne o valor especial `None`, que é um valor válido em Python.",
+                type: "AR",
+                options: [
+                    { text: "A asserção e a razão são proposições verdadeiras, e a razão é uma justificativa correta da asserção.", isCorrect: false, rationale: "A asserção é falsa." },
+                    { text: "A asserção é uma proposição verdadeira, e a razão é uma proposição falsa.", isCorrect: false, rationale: "Ambas as proposições são falsas." },
+                    { text: "A asserção é uma proposição falsa, e a razão é uma proposição verdadeira.", isCorrect: true, rationale: "A asserção é falsa, pois a função pode ser usada (e.g., para $print$) mesmo retornando $None$. A razão é verdadeira, pois o valor retornado por padrão é o objeto $None$." },
+                    { text: "A asserção e a razão são proposições falsas.", isCorrect: false, rationale: "A razão é verdadeira." }
+                ],
+                correct_saying_index: 15, /* Mapeia para ditados[15] */
+                hint: "Toda função em Python retorna algo. Qual é o valor 'vazio' em Python?"
+            },
+            // 17. Python: Dicionário vs. Lista (AR) (Antigo Q16)
+            {
+                id: 17,
+                summary: "Listas e dicionários são estruturas de dados de coleção em Python, mas diferem fundamentalmente em como os dados são organizados e acessados.",
+                question: "ASSINALA-SE que dicionários são ideais para modelar dados com atributos nomeados e para acesso rápido de valores. PORQUE a chave do dicionário (ao contrário do índice da lista) fornece acesso direto ao valor, sem a necessidade de percorrer a coleção em sequência.",
+                type: "AR",
+                options: [
+                    { text: "A asserção e a razão são proposições verdadeiras, e a razão é uma justificativa correta da asserção.", isCorrect: true, rationale: "Ambas são verdadeiras e a razão justifica. Dicionários usam chaves (nomes) e oferecem acesso $O(1)$ (tempo constante), sendo mais rápido que buscar em uma lista desordenada." },
+                    { text: "A asserção e a razão são proposições verdadeiras, mas a razão não é uma justificativa correta da asserção.", isCorrect: false, rationale: "A razão (acesso direto pela chave) é, de fato, a justificativa para o acesso rápido e modelagem com atributos nomeados." },
+                    { text: "A asserção é uma proposição falsa, e a razão é uma proposição verdadeira.", isCorrect: false, rationale: "A asserção é verdadeira. Dicionários são a estrutura de dados preferida para mapeamento." },
+                    { text: "A asserção é uma proposição verdadeira, e a razão é uma proposição falsa.", isCorrect: false, rationale: "A razão é verdadeira. O acesso por chave é o que garante a eficiência do dicionário." }
+                ],
+                correct_saying_index: 16, /* Mapeia para ditados[16] */
+                hint: "Pense na diferença entre procurar um livro pelo número da prateleira e procurá-lo pelo título."
+            },
+            // 18. Python: Análise de Código (Função) - CA 2/3 (Antigo Q17)
+            {
+                id: 18,
+                summary: "Esta função simples exemplifica o uso de um parâmetro de entrada e uma instrução condicional básica para processar um valor e retornar um resultado com base nesse processamento.",
+                question: "Qual será o resultado da chamada da função `analisa_idade(25)`?",
+                type: "CA",
+                code: "def analisa_idade(idade):\n    if idade >= 18:\n        return 'Adulto'\n    else:\n        return 'Menor'",
+                options: [
+                    { text: "Retorna 'Adulto', pois o valor $25$ satisfaz a condição $idade >= 18$.", isCorrect: true, rationale: "A idade $25$ é maior ou igual a $18$, então a condição é $True$, e o primeiro bloco de $return$ é executado." },
+                    { text: "Retorna 'Menor', pois a instrução $else$ é executada após o $if$.", isCorrect: false, rationale: "A condição do $if$ é $True$ ($25 \ge 18$); portanto, o bloco $else$ é ignorado." },
+                    { text: "O código falha com um erro de sintaxe, pois falta um valor de retorno no $else$.", isCorrect: false, rationale: "O $else$ contém um $return$, e a sintaxe está correta." },
+                    { text: "Retorna $25$, pois a função apenas ecoa o valor de entrada se não for igual a 18.", isCorrect: false, rationale: "A função retorna uma string ('Adulto' ou 'Menor'), não o valor numérico de entrada." }
+                ],
+                correct_saying_index: 17, /* Mapeia para ditados[17] */
+                hint: "A execução de uma função para no momento em que a instrução $return$ é alcançada."
+            },
+            // 19. Agente: Melhor Resultado (MC) (Antigo Q18)
+            {
+                id: 19,
+                summary: "A definição de um agente racional está intrinsecamente ligada à escolha de ações que resultam no 'melhor resultado possível' (ou esperado) dentro de um ambiente.",
+                question: "Para um agente ser considerado 'racional', ele deve sempre escolher a ação que:",
+                type: "MC",
+                options: [
+                    { text: "É a mais rápida de ser executada, priorizando a velocidade sobre a precisão.", isCorrect: false, rationale: "A velocidade é uma métrica de desempenho, mas a racionalidade prioriza a maximização do resultado/objetivo." },
+                    { text: "Garante o 'melhor resultado esperado' com base na sua sequência de percepções e conhecimento prévio.", isCorrect: true, rationale: "Esta é a definição formal de um agente racional: agir para maximizar o desempenho dado o conhecimento e as percepções atuais." },
+                    { text: "É a mais popular ou com maior probabilidade de ser escolhida por um humano.", isCorrect: false, rationale: "A racionalidade é definida por um padrão ideal de desempenho, não por comportamento humano (que pode ser irracional)." },
+                    { text: "Exige o menor consumo de recursos computacionais e energia.", isCorrect: false, rationale: "A eficiência de recursos é uma consideração prática, mas o 'melhor resultado' define a racionalidade." }
+                ],
+                correct_saying_index: 18, /* Mapeia para ditados[18] */
+                hint: "A chave está na palavra 'melhor' em relação aos objetivos do agente."
+            },
+            // 20. Chatbot Loop Termination (MC) (Antigo Q20)
+            {
+                id: 20,
+                summary: "A forma mais direta de sair de um loop infinito (`while True`) é usando a instrução `break`, mas outras variáveis de controle de fluxo também podem ser usadas.",
+                question: "Além de usar a instrução `break` com `while True`, qual é outra alternativa de programação eficaz para controlar o encerramento do loop de um chatbot?",
+                type: "MC",
+                options: [
+                    { text: "Usar um $for$ loop com uma lista pré-determinada de comandos de saída.", isCorrect: false, rationale: "O $for$ loop não é adequado para loops de tempo de vida indefinido." },
+                    { text: "Mudar a estrutura para $while$ $rodando$ e definir a variável $rodando = False$ quando a condição de saída for satisfeita.", isCorrect: true, rationale: "Esta é a alternativa padrão para loops $while$ controlados por variáveis booleanas, alcançando o mesmo efeito do $break$." },
+                    { text: "Encerrar o programa com a função $exit()$ em vez de $break$.", isCorrect: false, rationale: "A função $exit()$ encerra o programa todo, enquanto $break$ apenas sai do loop, o que nem sempre é o desejado." },
+                    { text: "Usar a instrução $continue$ para pular para o próximo comando.", isCorrect: false, rationale: "O $continue$ serve para pular uma iteração, não para encerrar o loop." }
+                ],
+                correct_saying_index: 19, /* Mapeia para ditados[19] */
+                hint: "Considere como você controlaria um loop $while$ se ele não fosse um $while$ $True$."
+            },
+            // 21. Python: Análise de Código (Operadores) - CA 3/3 (Antigo Q21)
+            {
+                id: 21,
+                summary: "Este código demonstra o uso de variáveis e do operador de comparação 'diferente de' ($!=$) para controlar o fluxo de um loop. A saída é determinada pelo momento em que a condição do `while` se torna falsa.",
+                question: "Qual será a saída final do valor de 'contador' após a execução deste código?",
+                type: "CA",
+                code: "contador = 0\nwhile contador != 5:\n    print(contador)\n    contador = contador + 2\nprint(f'Final: {contador}')",
+                options: [
+                    { text: "Final: 5, pois o loop se encerra exatamente quando o contador atinge 5.", isCorrect: false, rationale: "O contador nunca atinge o valor 5 com incrementos de 2 começando em 0." },
+                    { text: "Final: 4, pois 4 é o último valor impresso antes do loop parar.", isCorrect: false, rationale: "O loop não para em 4." },
+                    { text: "O código resultará em um loop infinito (e o programa será travado), pois o contador, que é incrementado de 2 em 2, nunca atingirá exatamente o valor 5.", isCorrect: true, rationale: "O loop $while$ $contador != 5$ significa 'enquanto o contador for diferente de 5'. Como $0, 2, 4, 6, ...$ nunca é igual a $5$, a condição sempre será $True$, resultando em um loop infinito." },
+                    { text: "Final: 6, pois o loop para quando o contador ultrapassa 5.", isCorrect: false, rationale: "A condição é $!= 5$ (diferente de 5), não $>$ 5 (maior que 5), o que significa que o loop não irá parar em 6." }
+                ],
+                correct_saying_index: 20, /* Mapeia para ditados[20] */
+                hint: "Verifique se o valor $5$ está contido na sequência de números gerados ($0, 2, 4, 6, 8, ...$)."
+            }
+        ];
+
+        // --- Funções de Renderização e Lógica ---
+
+        function renderQuestion(q) {
+            const quizContainer = document.getElementById('quiz-container');
+
+            const questionDiv = document.createElement('div');
+            questionDiv.id = `question-block-${q.id}`;
+            // Ajuste de classes para o modo escuro: bg-white -> bg-slate-700, texto claro
+            questionDiv.className = "flex flex-col md:flex-row bg-slate-700 rounded-xl shadow-2xl overflow-hidden border-2 border-indigo-500 hover:border-indigo-400 transition-all duration-300 ease-in-out";
+
+            // Left Panel (Summary)
+            const summaryDiv = document.createElement('div');
+            // Ajuste de classes para o modo escuro: bg-indigo-50 -> bg-indigo-700, text-indigo-800 -> text-indigo-200
+            // Adicionado justify-center para organização vertical dentro do bloco de resumo
+            summaryDiv.className = "md:w-1/3 p-6 bg-indigo-700 text-indigo-200 border-b md:border-b-0 md:border-r border-indigo-500 flex flex-col justify-center";
+            summaryDiv.innerHTML = `
+                <h3 class="font-bold text-lg mb-2">Questão ${q.id} - Tipo: ${q.type === 'AR' ? 'Asserção-Razão' : (q.type === 'CA' ? 'Análise de Código' : 'Múltipla Escolha')}</h3>
+                <p class="text-sm italic font-medium opacity-80">${q.summary}</p>
+            `;
+
+            // Right Panel (Question and Options)
+            const contentDiv = document.createElement('div');
+            // Ajuste de classes para o modo escuro: text-gray-800 -> text-gray-100
+            contentDiv.className = "md:w-2/3 p-6 flex flex-col justify-between";
+            contentDiv.innerHTML = `
+                <p class="text-gray-100 font-extrabold mb-4 text-lg">${q.question}</p>
+                ${q.code ? `<div class="code-block" aria-label="Trecho de código Python para análise">${q.code}</div>` : ''}
+                <div id="options-${q.id}" class="space-y-3 mt-4">
+                    ${q.options.map((option, index) => `
+                        <label for="q-${q.id}-opt-${index}" class="option-label">
+                            <input type="radio" id="q-${q.id}-opt-${index}" name="q-${q.id}" value="${index}" class="h-5 w-5 text-indigo-400 focus:ring-indigo-500">
+                            <span class="ml-3 text-base font-medium">${option.text}</span>
+                        </label>
+                    `).join('')}
+                </div>
+                <!-- Div adicionada para centralizar o botão -->
+                <div class="flex justify-center">
+                    <button id="btn-${q.id}" onclick="checkAnswer(${q.id})" class="mt-6 w-full md:w-auto px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition duration-150 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                        Verificar Resposta
+                    </button>
+                </div>
+                <p id="hint-${q.id}" class="text-sm text-gray-400 mt-3 hidden">Dica: ${q.hint}</p>
+            `;
+
+            questionDiv.appendChild(summaryDiv);
+            questionDiv.appendChild(contentDiv);
+            quizContainer.appendChild(questionDiv);
+        }
+
+        // Função principal para checar a resposta
+        function checkAnswer(questionId) {
+            const questionData = questions.find(q => q.id === questionId);
+            const optionsContainer = document.getElementById(`options-${questionId}`);
+            const selectedInput = document.querySelector(`input[name="q-${questionId}"]:checked`);
+            const checkButton = document.getElementById(`btn-${questionId}`);
+
+            if (!selectedInput) {
+                showModal("Atenção!", "Por favor, selecione uma opção antes de verificar a resposta.");
+                return;
+            }
+
+            const selectedIndex = parseInt(selectedInput.value);
+            const selectedOption = questionData.options[selectedIndex];
+
+            // 1. Mostrar Dica (Se não for a primeira tentativa, para fins de feedback mais elaborado)
+            document.getElementById(`hint-${questionId}`).classList.remove('hidden');
+
+            // 2. Desabilitar inputs e botão
+            optionsContainer.querySelectorAll('input').forEach(input => input.disabled = true);
+            checkButton.disabled = true;
+
+            // 3. Destacar respostas
+            questionData.options.forEach((option, index) => {
+                const label = document.querySelector(`label[for="q-${questionId}-opt-${index}"]`);
+                label.classList.remove('hover:border-indigo-500', 'hover:bg-slate-600'); // Ajuste da classe hover para dark mode
+
+                if (option.isCorrect) {
+                    label.classList.add('correct-answer');
+                } else if (index === selectedIndex) {
+                    label.classList.add('incorrect-answer');
+                }
+            });
+
+            // 4. Feedback Personalizado
+            if (selectedOption.isCorrect) {
+                // Usa o ditado japonês correspondente ao ID da questão
+                const japaneseSaying = ditados[questionData.correct_saying_index];
+
+                showModal(
+                    "🎉 Você acertou!",
+                    `Parabéns! Sua resposta está correta. ${selectedOption.rationale}. Lembre-se, como dizem no Japão: ${japaneseSaying}`
+                );
+            } else {
+                // Monta o feedback para o erro
+                const rationaleMessage = selectedOption.rationale;
+                const correctAnswer = questionData.options.find(opt => opt.isCorrect);
+
+                showModal(
+                    "❌ Você errou!",
+                    `A sua escolha está incorreta. Feedback: ${rationaleMessage}. \n\nO motivo principal da resposta correta ser ${correctAnswer.text} é: ${correctAnswer.rationale}.`
+                );
+
+                // Para este teste, manteremos desabilitado após a primeira tentativa.
+            }
+        }
+
+        // Inicializar o quiz ao carregar a página
+        window.onload = function () {
+            questions.forEach(renderQuestion);
+        };
+    </script>
+</body>
+
+</html>
